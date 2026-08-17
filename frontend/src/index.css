@@ -1,0 +1,263 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+/* Bundled, not CDN — the app must work offline. */
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+/*
+  Design notes
+  ------------
+  This is an instrument panel for a phone system, so it borrows from that:
+  warm charcoal rather than the usual blue-black, IBM Plex for its engineered,
+  slightly mechanical voice, and one hot signal orange used sparingly — the
+  colour of an on-air lamp. Structural things (node names, functions, fields)
+  are always mono; prose is always sans. That split is the main way the UI
+  tells you what is data and what is commentary.
+
+  Semantic hues are warm-shifted off the Tailwind defaults so nothing reads as
+  a stock palette.
+*/
+@theme {
+  /* surfaces — warm, not blue */
+  --color-ink-950: #0c0b0a;
+  --color-ink-900: #121110;
+  --color-ink-850: #191715;
+  --color-ink-800: #211e1b;
+  --color-ink-700: #2e2a26;
+  --color-ink-600: #413b35;
+
+  /* type */
+  --color-mist-400: #8b8378;
+  --color-mist-300: #aaa197;
+  --color-mist-100: #ece7df;
+
+  /* the one accent */
+  --color-signal: #ff7a1a;
+  --color-signal-2: #ffab6b;
+
+  /* warm-shifted semantics */
+  --color-emerald-300: #a5cf9c;
+  --color-emerald-400: #7fb877;
+  --color-emerald-500: #5f9c58;
+  --color-emerald-700: #3c6438;
+
+  --color-rose-300: #f2a094;
+  --color-rose-400: #e5776a;
+  --color-rose-500: #d4574a;
+  --color-rose-600: #b8453a;
+  --color-rose-800: #75281f;
+  --color-rose-900: #4d1a14;
+  --color-rose-950: #2b0f0b;
+
+  --color-amber-200: #f5d9a3;
+  --color-amber-300: #eec97f;
+  --color-amber-400: #dfae52;
+  --color-amber-500: #c89238;
+  --color-amber-600: #a5762a;
+  --color-amber-900: #4d3512;
+  --color-amber-950: #2a1d09;
+
+  --color-sky-300: #9dbfd4;
+  --color-sky-400: #74a3bf;
+  --color-sky-500: #5788a6;
+
+  --color-violet-300: #c3aede;
+  --color-violet-400: #a68fc9;
+  --color-violet-500: #8b73b0;
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink-950);
+  color: var(--color-mist-100);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-feature-settings: "cv02", "cv03", "tnum";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Counts and versions should never wobble as they change. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The micro-label used for every section head. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-mist-400);
+}
+
+/* Quiet scrollbars. */
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: #34302b;
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #46403a;
+  background-clip: content-box;
+}
+
+/* --------------------------------------------------------- react flow --- */
+.react-flow__background {
+  background: var(--color-ink-950);
+}
+.react-flow__edge-path {
+  stroke: #4a423b;
+  stroke-width: 1.5;
+}
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--color-signal);
+}
+.react-flow__edge-text {
+  fill: var(--color-mist-400);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+}
+.react-flow__edge-textbg {
+  fill: var(--color-ink-950);
+}
+.react-flow__handle {
+  background: #4a423b;
+  border: none;
+  width: 6px;
+  height: 6px;
+}
+.react-flow__attribution {
+  display: none;
+}
+
+/* Free layout: the node itself is the drag handle, so say so. */
+.react-flow__node.draggable {
+  cursor: grab;
+}
+.react-flow__node.draggable:active,
+.react-flow__node.draggable.dragging {
+  cursor: grabbing;
+}
+.react-flow__node.draggable.dragging > div {
+  border-color: var(--color-signal);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.75);
+}
+.react-flow__controls {
+  box-shadow: none;
+  border: 1px solid var(--color-ink-700);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: var(--color-ink-900);
+  border-bottom: 1px solid var(--color-ink-700);
+  fill: var(--color-mist-400);
+  width: 24px;
+  height: 24px;
+}
+.react-flow__controls-button:hover {
+  background: var(--color-ink-800);
+  fill: var(--color-mist-100);
+}
+
+/* ---------------------------------------------------------- animation --- */
+@keyframes on-air {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(255, 122, 26, 0),
+      0 0 14px -2px rgba(255, 122, 26, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 5px rgba(255, 122, 26, 0.07),
+      0 0 22px -2px rgba(255, 122, 26, 0.8);
+  }
+}
+.pulse-live {
+  animation: on-air 1.9s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fade-up 0.16s ease-out;
+}
+
+@keyframes sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+/* Used on the "working" strip so a long model call reads as progress. */
+.working-strip {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 122, 26, 0.5) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: sweep 1.4s linear infinite;
+}
+
+/* A hairline that fades at both ends — used instead of full-width borders. */
+.rule-fade {
+  background: linear-gradient(90deg, transparent, var(--color-ink-700) 12%, var(--color-ink-700) 88%, transparent);
+}
+
+textarea,
+input,
+select,
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: rgba(255, 122, 26, 0.28);
+}
+
+:focus-visible {
+  outline: 1px solid var(--color-signal);
+  outline-offset: 1px;
+}

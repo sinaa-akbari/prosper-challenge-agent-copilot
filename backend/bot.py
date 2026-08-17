@@ -1,14 +1,16 @@
 #
-# Voice pipeline — Prosper Product Engineer Challenge
+# Standalone voice bot — the starter's entry point, kept working.
 #
-# The runnable voice agent: WebRTC transport + ElevenLabs STT/TTS + OpenAI LLM,
-# driven by a Pipecat Flows node graph. This file is generic — it loads an agent
-# definition (JSON) via AgentBuilder and runs it. Swapping the agent is a data
-# change (edit/replace the JSON), not a code change.
+# `server.py` is the real application: it serves the builder UI and starts a call
+# against whichever agent you're editing. This file is the single-agent path via
+# Pipecat's own dev runner, which is useful for debugging the voice pipeline on
+# its own, without the UI in the way.
 #
-#   example_flow.json  ->  AgentBuilder  ->  Pipecat Flows graph  ->  FlowManager
+#   python bot.py            run the seeded demo agent
+#   AGENT_ID=my-agent python bot.py
+#   AGENT_FLOW=path.json python bot.py
 #
-# Run:  python bot.py   then open http://localhost:7860/client
+# Then open http://localhost:7860/client.
 #
 
 import os
@@ -16,7 +18,6 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from loguru import logger
-
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -29,20 +30,30 @@ from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.elevenlabs.stt import ElevenLabsRealtimeSTTService
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
-from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.workers.runner import WorkerRunner
 from pipecat_flows import FlowManager
 
-from agent_builder import AgentBuilder
+from agent_builder import AgentBuilder, store
+from voice import build_llm
 
 # Load .env next to this file, so the bot runs the same from the repo root or backend/.
 load_dotenv(Path(__file__).parent / ".env", override=True)
 
+# Which agent to run: an explicit JSON file wins, otherwise one from the store.
+AGENT_FLOW = os.environ.get("AGENT_FLOW")
+AGENT_ID = os.environ.get("AGENT_ID", "northside-scheduling")
 
-# The agent this bot runs. Point this at any agent JSON (the Phase 2 Composer
-# would generate one and drop it here).
-AGENT_FLOW = Path(__file__).parent / "example_flow.json"
+
+def load_builder() -> AgentBuilder:
+    if AGENT_FLOW:
+        return AgentBuilder.from_json(AGENT_FLOW)
+    if store.exists(AGENT_ID):
+        return AgentBuilder.from_dict(store.get_config(AGENT_ID))
+    fallback = Path(__file__).parent / "example_flow.json"
+    logger.warning(f"No agent '{AGENT_ID}' in the store — falling back to {fallback.name}. "
+                   "Run `python seed.py` to create the demo agent.")
+    return AgentBuilder.from_json(fallback)
 
 
 transport_params = {
@@ -54,14 +65,14 @@ async def run_bot(
     transport: BaseTransport, runner_args: RunnerArguments, builder: AgentBuilder
 ) -> None:
     config = builder.config
-    logger.info(f"Starting '{config.name}' with {len(config.nodes)} nodes")
+    logger.info(f"Starting '{config.name}' with {len(config.nodes)} nodes on {config.model}")
 
     stt = ElevenLabsRealtimeSTTService(api_key=os.environ["ELEVENLABS_API_KEY"])
     tts = ElevenLabsTTSService(
         api_key=os.environ["ELEVENLABS_API_KEY"],
         settings=ElevenLabsTTSService.Settings(voice=config.voice_id),
     )
-    llm = OpenAILLMService(api_key=os.environ["OPENAI_API_KEY"], model=config.model)
+    llm = build_llm(config.model)
 
     context = LLMContext()
     context_aggregator = LLMContextAggregatorPair(
@@ -112,8 +123,7 @@ async def run_bot(
 async def bot(runner_args: RunnerArguments):
     """Entry point invoked by the Pipecat dev runner (and Pipecat Cloud)."""
     transport = await create_transport(runner_args, transport_params)
-    builder = AgentBuilder.from_json(AGENT_FLOW)
-    await run_bot(transport, runner_args, builder)
+    await run_bot(transport, runner_args, load_builder())
 
 
 if __name__ == "__main__":
